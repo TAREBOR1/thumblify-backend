@@ -79,14 +79,17 @@ exports.login= async(req,res)=>{
         req.session.userId=validUser._id
     req.session.isLoggedIn=true
 
-        return res.json({success:true,
-        messgae:"Log in successfully",
-        user:{
-            id:validUser._id,
-            name:validUser.name,
-            email:validUser.email
-        }
-        })
+        req.session.save(() => {
+  res.json({
+    success: true,
+    message: "Log in successfully",
+    user: {
+      id: validUser._id,
+      name: validUser.name,
+      email: validUser.email,
+    },
+  });
+});
     } catch (error) {
           res.status(500).json({
         message:error.message,
