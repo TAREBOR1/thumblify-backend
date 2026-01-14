@@ -4,6 +4,9 @@ const port=process.env.PORT
 const database=require('./config/dbconfig')
 const app=require('./app')
 
+  app.get('/', (req, res) => {
+  res.send('Hello World!');
+});
 
 app.listen(port,()=>{
     console.log("server is connecting to:",port)
