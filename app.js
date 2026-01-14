@@ -13,7 +13,7 @@ app.use(express.json())
 
 
 app.use(cors({
-    origin:[process.env.CLIENT_URL,process.env.CLIENT_URL1],
+    origin:[process.env.CLIENT_URL],
     methods:['GET','POST','PUT','DELETE'],
     allowedHeaders:[
         'Content-Type',
