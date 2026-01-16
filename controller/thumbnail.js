@@ -27,8 +27,9 @@ const colorSchemeDescriptions = {
 }
       const {userId}=req.session
       const {title,style,aspect_ratio,color_scheme,text_overlay,user_prompt}=req.body
+       const safeStyle = style || "Bold & Graphic"
             const thumbnail = new Thumbnail({
-                 userId,title,style,aspect_ratio,color_scheme,text_overlay,user_prompt,prompt_used:user_prompt,isGenerating:true
+                 userId,title,style:safeStyle,aspect_ratio,color_scheme,text_overlay,user_prompt,prompt_used:user_prompt,isGenerating:true
                 })
            
                 await thumbnail.save()

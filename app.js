@@ -46,6 +46,9 @@ app.use(session({
 }));
 
 
+
+
+
 app.use('/api/auth',authRoute)
 app.use('/api/thumbnail',thumbnailRoute)
 app.use('/api/user',userRoute)
