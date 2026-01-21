@@ -105,7 +105,15 @@ exports.logout =async (req, res) => {
         if (error) {
             return res.status(500).json({ message: error.message, success: false });
         }
-        res.clearCookie("sessionId");
+        res.clearCookie("sessionId",{
+        httpOnly: true, // client-side JS cannot access cookie
+        secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
+        sameSite: process.env.NODE_ENV === 'production'?'none' :'lax',
+        maxAge: 24 * 60 * 60 * 1000, // 1 day in ms
+        path:'/'
+
+
+    });
         return res.json({ success: true, message: "Log out successfully" });
     });
 };
