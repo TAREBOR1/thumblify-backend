@@ -3,6 +3,7 @@ const app=express();
 const cors=require('cors');
 const MongoStore = require('connect-mongo').default;
 const session = require('express-session');
+const cookieParser = require('cookie-parser');
 const authRoute = require('./route/auth');
 const thumbnailRoute = require('./route/thumbnail');
 const userRoute = require('./route/user');
@@ -22,26 +23,7 @@ app.use(cors({
 }));
 
 app.set('trust proxy',1)
-
-app.use(session({
-    name:"sessionId", // cookie name
-    secret: process.env.SESSION_SECRET, // should be in .env
-    resave: false, // don’t save session if unmodified
-    saveUninitialized: false, // don’t create empty sessions
-    store: MongoStore.create({
-        mongoUrl: process.env.CONN_STR,
-        collectionName: 'sessions', // optional
-    }),
-    cookie: {
-        httpOnly: true, // client-side JS cannot access cookie
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
-        sameSite: process.env.NODE_ENV === 'production'?'none' :'lax',
-        maxAge: 24 * 60 * 60 * 1000, // 1 day in ms
-        path:'/'
-
-
-    }
-}));
+app.use(cookieParser());;
 
 
 

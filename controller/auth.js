@@ -1,149 +1,85 @@
-const User = require("../model/user");
-const bcrypt=require('bcryptjs');
+const User = require('../model/user');
+const bcrypt = require('bcryptjs');
+const { createToken } = require('../utils/jwt');
 
+// Signup
+exports.signup = async (req, res) => {
+  const { name, email, password } = req.body;
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: 'Missing details', success: false });
+  }
 
-
-exports.signup= async (req,res)=>{
- const {name,email,password}= req.body;
- if(!name||!email||!password){
-    return res.status(400).json({
-        message:"missing details",
-        success:false
-    })
- }
- try {
-    const existingUser= await User.findOne({email})
-    if(existingUser){
-       return res.status(400).json({
-           message:"user already exist",
-           success:false
-       })
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: 'User already exists', success: false });
     }
-    const salt= await bcrypt.genSalt(10)
-    const hashedpassword= await bcrypt.hash(password,salt)
-     const user = new User({
-        name,
-        password:hashedpassword,
-        email
-     })
 
-     await user.save()
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    //  setting user data in session
+    const user = await User.create({ name, email, password: hashedPassword });
 
-    req.session.userId=user._id
-    req.session.isLoggedIn=true
+    const token = createToken(user);
 
-    req.session.save(() => { 
-        return res.json({
-            success: true,
-            message: "Account created successfully",
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email
-            }
-        });
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
     });
 
- } catch (error) {
-    res.status(500).json({
-        message:error.message,
-        success:false
-    })
- }
-}
-
-
-exports.login= async(req,res)=>{
-    const {email,password}= req.body;
-    if(!email||!password){
-        return res.status(400).json({
-            message:"email and password required",
-            success:false
-        })
-    }
-    try {
-        const validUser= await User.findOne({email})
-        if(!validUser){
-            return res.status(400).json({
-                message:"User does not exist",
-                success:false
-            })}
-        const validatePassword= await bcrypt.compare(password,validUser.password);
-        if(!validatePassword){
-            return res.status(400).json({
-                message:"invalid password ",
-                success:false
-            })
-        }
-    
-        req.session.userId=validUser._id
-    req.session.isLoggedIn=true
-
-        req.session.save(() => {
-  res.json({
-    success: true,
-    message: "Log in successfully",
-    user: {
-      id: validUser._id,
-      name: validUser.name,
-      email: validUser.email,
-    },
-  });
-});
-    } catch (error) {
-          res.status(500).json({
-        message:error.message,
-        success:false
-    })
-}
-}
-
-exports.logout =async (req, res) => {
-    req.session.destroy((error) => {
-        if (error) {
-            return res.status(500).json({ message: error.message, success: false });
-        }
-        res.clearCookie("sessionId",{
-        httpOnly: true, // client-side JS cannot access cookie
-        secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
-        sameSite: process.env.NODE_ENV === 'production'?'none' :'lax',
-        maxAge: 24 * 60 * 60 * 1000, // 1 day in ms
-        path:'/'
-
-
-    });
-        return res.json({ success: true, message: "Log out successfully" });
-    });
+    return res.json({ success: true, message: 'Account created', user: { id: user._id, name: user.name, email: user.email } });
+  } catch (err) {
+    return res.status(500).json({ message: err.message, success: false });
+  }
 };
 
+// Login
+exports.login = async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) {
+    return res.status(400).json({ message: 'Email and password required', success: false });
+  }
 
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User does not exist', success: false });
 
+    const isValid = await bcrypt.compare(password, user.password);
+    if (!isValid) return res.status(400).json({ message: 'Invalid password', success: false });
+
+    const token = createToken(user);
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+      maxAge: 24 * 60 * 60 * 1000,
+      path: '/',
+    });
+
+    return res.json({ success: true, message: 'Login successful', user: { id: user._id, name: user.name, email: user.email } });
+  } catch (err) {
+    return res.status(500).json({ message: err.message, success: false });
+  }
+};
+
+// Logout
+exports.logout = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    path: '/',
+  });
+  res.json({ success: true, message: 'Logged out successfully' });
+};
+
+// Verify
 exports.verifyUser = async (req, res) => {
-    try {
-        const { userId } = req.session;
-        const user = await User.findById(userId).select('-password');
-        
-        if (!user) {
-            return res.status(401).json({
-                message: "Unauthorized user",
-                success: false
-            });
-        }
-        
-        res.json({
-            success: true, // Add success field
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            message: error.message,
-            success: false
-        });
-    }
+  const userId = req.user.id;
+  const user = await User.findById(userId).select('-password');
+  if (!user) return res.status(401).json({ message: 'Unauthorized', success: false });
+  res.json({ user });
 };
